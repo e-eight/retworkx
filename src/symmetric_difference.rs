@@ -17,6 +17,7 @@ use hashbrown::{HashMap, HashSet};
 use petgraph::visit::{IntoEdgeReferences, IntoNodeReferences};
 use petgraph::{algo, EdgeType};
 
+use pyo3::exceptions::PyIndexError;
 use pyo3::prelude::*;
 use pyo3::Python;
 
@@ -25,15 +26,23 @@ fn symmetric_difference<Ty: EdgeType>(
     first: &StablePyGraph<Ty>,
     second: &StablePyGraph<Ty>,
 ) -> PyResult<StablePyGraph<Ty>> {
-    let mut first_nodes_set = first.node_references().cloned();
-    let mut second_nodes_set: HashSet<_> = second.node_references().cloned();
+    let mut first_nodes_set: HashSet<_> = first
+        .node_references()
+        .into_iter()
+        .map(|(node, _)| node)
+        .collect();
+    let mut second_nodes_set: HashSet<_> = second
+        .node_references()
+        .into_iter()
+        .map(|(node, _)| node)
+        .collect();
     let nodes_symm_diff: HashSet<_> = first_nodes_set
         .symmetric_difference(&second_nodes_set)
         .collect();
     if !nodes_symm_diff.is_empty() {
-        // return Err(PyIndexError::new_err(
-        //     "The two graphs do not have the same nodes.",
-        // ));
+        return Err(PyIndexError::new_err(
+            "The two graphs do not have the same nodes.",
+        ));
     }
 
     let mut final_graph = StablePyGraph::<Ty>::with_capacity(
